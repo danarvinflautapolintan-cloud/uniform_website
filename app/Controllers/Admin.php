@@ -1,0 +1,182 @@
+<?php
+namespace App\Controllers;
+
+class Admin extends AppBase
+{
+    public function login()
+    {
+        if ($this->request->getMethod() === 'POST') {
+            if ($this->attempt(true)) return redirect()->to('/admin');
+            $this->msg('err', 'Invalid admin login.');
+        }
+        return view('auth', ['title' => 'Admin Login', 'action' => site_url('admin/login'), 'reg' => false, 'admin' => true]);
+    }
+
+    public function logout() { session()->destroy(); return redirect()->to('/admin/login'); }
+
+    private function sizesOf(array $ids): array
+    {
+        $out = [];
+        if ($ids) foreach (db_connect()->table('uniform_sizes')->whereIn('uniform_id', $ids)->get()->getResultArray() as $r) $out[$r['uniform_id']][$r['size']] = (int) $r['stock'];
+        return $out;
+    }
+
+    public function index()
+    {
+        if ($r = $this->needAdmin()) return $r;
+        $db = db_connect();
+        $items = $db->table('uniforms')->orderBy('id', 'DESC')->get()->getResultArray();
+        $stats = [
+            'uniforms' => count($items),
+            'stock'    => (int) ($db->table('uniform_sizes')->selectSum('stock', 't')->get()->getRow()->t ?? 0),
+            'students' => $db->table('users')->where('role', 'student')->countAllResults(),
+            'pending'  => $db->table('requests')->where('status', 'pending')->countAllResults(),
+            'claimed'  => $db->table('requests')->where('status', 'claimed')->countAllResults(),
+        ];
+        return view('admin/list', ['items' => $items, 'stock' => $this->sizesOf(array_column($items, 'id')), 'sizes' => self::SIZES, 'stats' => $stats]);
+    }
+
+    public function users()
+    {
+        if ($r = $this->needAdmin()) return $r;
+        $q = trim((string) $this->request->getGet('q'));
+        $b = db_connect()->table('users u')
+            ->select('u.id,u.student_no,u.name,u.created_at,COUNT(r.id) AS reqs')
+            ->join('requests r', 'r.user_id=u.id', 'left')
+            ->where('u.role', 'student')
+            ->groupBy('u.id,u.student_no,u.name,u.created_at')
+            ->orderBy('u.id', 'DESC')->limit(200);
+        if ($q !== '') $b->groupStart()->like('u.name', $q)->orLike('u.student_no', $q)->groupEnd();
+        return view('admin/users', ['rows' => $b->get()->getResultArray(), 'q' => $q]);
+    }
+
+    public function form($id = null)
+    {
+        if ($r = $this->needAdmin()) return $r;
+        $it = ['id' => 0, 'name' => '', 'description' => '', 'price' => '0.00', 'photo' => ''];
+        $stock = [];
+        if ($id) {
+            $it = db_connect()->table('uniforms')->where('id', (int) $id)->get()->getRowArray();
+            if (!$it) return redirect()->to('/admin');
+            $stock = $this->sizesOf([(int) $id])[(int) $id] ?? [];
+        }
+        return view('admin/form', ['it' => $it, 'stock' => $stock, 'sizes' => self::SIZES]);
+    }
+
+    public function save()
+    {
+        if ($r = $this->needAdmin()) return $r;
+        $db = db_connect();
+        $id = (int) $this->request->getPost('id');
+        $old = $id ? $db->table('uniforms')->where('id', $id)->get()->getRowArray() : null;
+        if ($id && !$old) return redirect()->to('/admin');
+        $file = $this->request->getFile('photo');
+        $has = $file && $file->getError() !== UPLOAD_ERR_NO_FILE;
+        $img = 'is_image[photo]|mime_in[photo,image/jpeg,image/png,image/webp]|max_size[photo,2048]';
+        $rules = [
+            'name'        => 'required|min_length[3]|max_length[100]',
+            'description' => 'permit_empty|max_length[255]',
+            'price'       => 'required|decimal|greater_than_equal_to[0]|less_than[100000]',
+        ];
+        if (!$id) $rules['photo'] = 'uploaded[photo]|' . $img; elseif ($has) $rules['photo'] = $img;
+        foreach (self::SIZES as $s) $rules["stock.$s"] = 'required|is_natural|less_than[1000]';
+        if (!$this->validate($rules)) {
+            $this->msg('err', implode(' ', $this->validator->getErrors()));
+            return redirect()->back()->withInput();
+        }
+        $row = [
+            'name'        => trim($this->request->getPost('name')),
+            'description' => trim((string) $this->request->getPost('description')),
+            'price'       => round((float) $this->request->getPost('price'), 2),
+        ];
+        if ($has) { $row['photo'] = $file->getRandomName(); $file->move(FCPATH . 'uploads', $row['photo']); }
+        $stock = $this->request->getPost('stock');
+        $db->transStart();
+        if ($id) $db->table('uniforms')->where('id', $id)->update($row);
+        else { $db->table('uniforms')->insert($row); $id = $db->insertID(); }
+        foreach (self::SIZES as $s) $db->query('INSERT INTO uniform_sizes(uniform_id,size,stock) VALUES(?,?,?) ON DUPLICATE KEY UPDATE stock=VALUES(stock)', [$id, $s, (int) $stock[$s]]);
+        $db->transComplete();
+        if ($has && $old) @unlink(FCPATH . 'uploads/' . basename($old['photo']));
+        $this->msg('msg', 'Uniform saved.');
+        return redirect()->to('/admin');
+    }
+
+    public function delete()
+    {
+        if ($r = $this->needAdmin()) return $r;
+        $db = db_connect();
+        $u = $db->table('uniforms')->where('id', (int) $this->request->getPost('id'))->get()->getRowArray();
+        if ($u) { $db->table('uniforms')->where('id', $u['id'])->delete(); @unlink(FCPATH . 'uploads/' . basename($u['photo'])); $this->msg('msg', 'Uniform deleted.'); }
+        return redirect()->to('/admin');
+    }
+
+    private function allRequests(string $st = ''): array
+    {
+        $b = db_connect()->table('requests r')->select('r.id,r.status,r.created_at,us.name student,us.student_no,u.name uniform,s.size')
+            ->join('users us', 'us.id=r.user_id')->join('uniform_sizes s', 's.id=r.size_id')->join('uniforms u', 'u.id=s.uniform_id')
+            ->orderBy('r.id', 'DESC');
+        if (in_array($st, ['pending', 'approved', 'rejected', 'claimed'], true)) $b->where('r.status', $st);
+        return $b->get()->getResultArray();
+    }
+
+    public function requests()
+    {
+        if ($r = $this->needAdmin()) return $r;
+        $st = (string) $this->request->getGet('status');
+        return view('admin/requests', ['rows' => $this->allRequests($st), 'st' => $st]);
+    }
+
+    public function act()
+    {
+        if ($r = $this->needAdmin()) return $r;
+        $db = db_connect();
+        $act = (string) $this->request->getPost('action');
+        $req = $db->table('requests')->where('id', (int) $this->request->getPost('id'))->get()->getRowArray();
+        if (!$req || !in_array($act, ['approve', 'reject', 'claim'], true)) return redirect()->to('/admin/requests');
+        if ($act === 'approve' && $req['status'] === 'pending') {
+            $db->transStart();
+            $db->query('UPDATE uniform_sizes SET stock=stock-1 WHERE id=? AND stock>0', [$req['size_id']]);
+            $ok = $db->affectedRows() === 1;
+            if ($ok) $db->table('requests')->where('id', $req['id'])->update(['status' => 'approved']);
+            $db->transComplete();
+            $ok ? $this->msg('msg', 'Approved. Stock updated.') : $this->msg('err', 'Cannot approve: out of stock.');
+        } elseif ($act === 'reject' && $req['status'] === 'pending') {
+            $db->table('requests')->where('id', $req['id'])->update(['status' => 'rejected']);
+        } elseif ($act === 'claim' && $req['status'] === 'approved') {
+            $db->table('requests')->where('id', $req['id'])->update(['status' => 'claimed']);
+        }
+        return redirect()->to('/admin/requests');
+    }
+
+    public function deleteRequest()
+    {
+        if ($r = $this->needAdmin()) return $r;
+        $db = db_connect();
+        $req = $db->table('requests')->where('id', (int) $this->request->getPost('id'))->get()->getRowArray();
+        if ($req) {
+            $db->transStart();
+            // approved pa lang (hindi pa claimed): ibalik ang stock
+            if ($req['status'] === 'approved') $db->query('UPDATE uniform_sizes SET stock=stock+1 WHERE id=?', [$req['size_id']]);
+            $db->table('requests')->where('id', $req['id'])->delete();
+            $db->transComplete();
+            $this->msg('msg', $req['status'] === 'approved' ? 'Request deleted. Stock returned.' : 'Request deleted.');
+        }
+        return redirect()->to($this->request->getPost('back') === 'report' ? '/admin/report' : '/admin/requests');
+    }
+
+    public function clearRequests()
+    {
+        if ($r = $this->needAdmin()) return $r;
+        $db = db_connect();
+        $db->table('requests')->whereIn('status', ['claimed', 'rejected'])->delete();
+        $this->msg('msg', 'Cleared all claimed and rejected requests (' . $db->affectedRows() . ').');
+        return redirect()->to('/admin/requests');
+    }
+
+    public function report()
+    {
+        if ($r = $this->needAdmin()) return $r;
+        $items = db_connect()->table('uniforms')->orderBy('name')->get()->getResultArray();
+        return view('admin/report', ['items' => $items, 'stock' => $this->sizesOf(array_column($items, 'id')), 'sizes' => self::SIZES, 'rows' => $this->allRequests()]);
+    }
+}
