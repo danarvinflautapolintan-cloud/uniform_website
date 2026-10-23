@@ -10,6 +10,7 @@
   <div class="fields">
     <label>Name<input name="name" required minlength="3" maxlength="100" placeholder="e.g. TAU Polo Shirt" value="<?= esc(old('name', $it['name'])) ?>"></label>
     <label>Description<textarea name="description" rows="3" maxlength="255" placeholder="Short details (color, fabric, who it's for)"><?= esc(old('description', $it['description'])) ?></textarea></label>
+    <label>Date acquired<input type="date" name="date_acquired" required value="<?= esc(old('date_acquired', $it['date_acquired'] ?? '')) ?>"></label>
     <label>Price (₱)<input type="number" name="price" min="0" max="99999" step="0.01" required placeholder="0.00" value="<?= esc(old('price', $it['price'])) ?>"></label>
     <h3>Stock per size</h3>
     <div class="sizes">

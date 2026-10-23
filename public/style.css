@@ -51,6 +51,8 @@ tr:last-child td{border-bottom:0}
 .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .top h2{margin:0}
 @media print{.nav,.noprint,.btn,button{display:none!important}body{background:#fff}.tablewrap{border:0}}
+.print-only{display:none}
+@media print{main{max-width:none;margin:0;padding:0}.print-only{display:block}.tablewrap{overflow:visible}table{font-size:11px}th,td{padding:6px;white-space:normal}.thumb{width:40px;height:40px}}
 
 /* uniform form */
 .panel{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:20px}

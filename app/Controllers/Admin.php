@@ -106,7 +106,7 @@ class Admin extends AppBase
     public function form($id = null)
     {
         if ($r = $this->needAdmin()) return $r;
-        $it = ['id' => 0, 'name' => '', 'description' => '', 'price' => '0.00', 'photo' => ''];
+        $it = ['id' => 0, 'name' => '', 'description' => '', 'date_acquired' => date('Y-m-d'), 'price' => '0.00', 'photo' => ''];
         $stock = [];
         if ($id) {
             $it = db_connect()->table('uniforms')->where('id', (int) $id)->get()->getRowArray();
@@ -127,9 +127,10 @@ class Admin extends AppBase
         $has = $file && $file->getError() !== UPLOAD_ERR_NO_FILE;
         $img = 'is_image[photo]|mime_in[photo,image/jpeg,image/png,image/webp]|max_size[photo,2048]';
         $rules = [
-            'name'        => 'required|min_length[3]|max_length[100]',
-            'description' => 'permit_empty|max_length[255]',
-            'price'       => 'required|decimal|greater_than_equal_to[0]|less_than[100000]',
+            'name'          => 'required|min_length[3]|max_length[100]',
+            'description'   => 'permit_empty|max_length[255]',
+            'date_acquired' => 'required|valid_date[Y-m-d]',
+            'price'         => 'required|decimal|greater_than_equal_to[0]|less_than[100000]',
         ];
         if (!$id) $rules['photo'] = 'uploaded[photo]|' . $img; elseif ($has) $rules['photo'] = $img;
         foreach (self::SIZES as $s) $rules["stock.$s"] = 'required|is_natural|less_than[1000]';
@@ -138,9 +139,10 @@ class Admin extends AppBase
             return redirect()->back()->withInput();
         }
         $row = [
-            'name'        => trim($this->request->getPost('name')),
-            'description' => trim((string) $this->request->getPost('description')),
-            'price'       => round((float) $this->request->getPost('price'), 2),
+            'name'          => trim($this->request->getPost('name')),
+            'description'   => trim((string) $this->request->getPost('description')),
+            'date_acquired' => trim((string) $this->request->getPost('date_acquired')),
+            'price'         => round((float) $this->request->getPost('price'), 2),
         ];
         if ($has) { $row['photo'] = $file->getRandomName(); $file->move(FCPATH . 'uploads', $row['photo']); }
         $stock = $this->request->getPost('stock');

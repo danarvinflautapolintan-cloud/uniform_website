@@ -110,6 +110,7 @@ CREATE TABLE `uniforms` (
   `id` int(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `description` varchar(255) NOT NULL DEFAULT '',
+  `date_acquired` date DEFAULT NULL,
   `price` decimal(10,2) NOT NULL DEFAULT 0.00,
   `photo` varchar(100) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
@@ -119,11 +120,11 @@ CREATE TABLE `uniforms` (
 -- Dumping data for table `uniforms`
 --
 
-INSERT INTO `uniforms` (`id`, `name`, `description`, `price`, `photo`, `created_at`) VALUES
-(1, 'CET Jersey 2026', '“CET Jersey 2026 (T-shirt, NBA Cut & Shorts)', 0.00, '1792394770_3701aa2028dd169b883d.jpg', '2026-10-19 07:26:10'),
-(2, 'Green pants', 'TAU Uniform Pants (Green)', 0.00, '1792394834_fe387e61e6938399953a.jpg', '2026-10-19 07:27:14'),
-(3, 'TAU Green Polo', 'TAU Polo Shirt', 0.00, '1792394894_ad799dcfc424c9aa3114.jpg', '2026-10-19 07:28:14'),
-(4, 'Cas', 'white', 250.00, '1792395139_c4251cd3d216d476309f.jpg', '2026-10-19 07:32:19');
+INSERT INTO `uniforms` (`id`, `name`, `description`, `date_acquired`, `price`, `photo`, `created_at`) VALUES
+(1, 'CET Jersey 2026', '“CET Jersey 2026 (T-shirt, NBA Cut & Shorts)', '2026-10-19', 0.00, '1792394770_3701aa2028dd169b883d.jpg', '2026-10-19 07:26:10'),
+(2, 'Green pants', 'TAU Uniform Pants (Green)', '2026-10-19', 0.00, '1792394834_fe387e61e6938399953a.jpg', '2026-10-19 07:27:14'),
+(3, 'TAU Green Polo', 'TAU Polo Shirt', '2026-10-19', 0.00, '1792394894_ad799dcfc424c9aa3114.jpg', '2026-10-19 07:28:14'),
+(4, 'Cas', 'white', '2026-10-19', 250.00, '1792395139_c4251cd3d216d476309f.jpg', '2026-10-19 07:32:19');
 
 -- --------------------------------------------------------
 
