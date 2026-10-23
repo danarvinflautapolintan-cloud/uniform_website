@@ -26,6 +26,7 @@ $routes->group('', ['filter' => 'csrf'], static function ($routes) {
         $routes->post('logout', 'Admin::logout');
         $routes->get('/', 'Admin::index');
         $routes->get('users', 'Admin::users');
+        $routes->post('users/delete', 'Admin::deleteUser');
         $routes->get('uniforms/new', 'Admin::form');
         $routes->get('uniforms/(:num)/edit', 'Admin::form/$1');
         $routes->post('uniforms/save', 'Admin::save');

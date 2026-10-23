@@ -50,6 +50,59 @@ class Admin extends AppBase
         return view('admin/users', ['rows' => $b->get()->getResultArray(), 'q' => $q]);
     }
 
+    public function deleteUser()
+    {
+        if ($r = $this->needAdmin()) return $r;
+        $db = db_connect();
+        $id = (int) $this->request->getPost('id');
+        $user = $db->table('users')->where('id', $id)->where('role', 'student')->get()->getRowArray();
+        $q = trim((string) $this->request->getPost('q'));
+        $redirect = redirect()->to('/admin/users' . ($q !== '' ? '?q=' . rawurlencode($q) : ''));
+
+        if (!$user) {
+            $this->msg('err', 'Student not found.');
+            return $redirect;
+        }
+
+        $approvedRequests = $db->table('requests')->select('size_id, COUNT(*) AS quantity', false)
+            ->where('user_id', $id)->where('status', 'approved')->groupBy('size_id')->get()->getResultArray();
+        $reservedListings = $db->table('listing_requests r')->select('r.listing_id')
+            ->join('listings l', 'l.id=r.listing_id')
+            ->where('r.buyer_id', $id)->where('r.status', 'approved')->where('l.status', 'reserved')
+            ->get()->getResultArray();
+        $photos = array_column(
+            $db->table('listings')->select('photo')->where('seller_id', $id)->get()->getResultArray(),
+            'photo'
+        );
+
+        $db->transBegin();
+        foreach ($approvedRequests as $request) {
+            $db->query('UPDATE uniform_sizes SET stock=stock+? WHERE id=?', [(int) $request['quantity'], (int) $request['size_id']]);
+        }
+        foreach ($reservedListings as $listing) {
+            $db->table('listings')->where('id', $listing['listing_id'])->update(['status' => 'active']);
+        }
+        $db->table('users')->where('id', $id)->where('role', 'student')->delete();
+        if (!$db->transStatus() || $db->affectedRows() !== 1) {
+            $db->transRollback();
+            $this->msg('err', 'Unable to remove student.');
+            return $redirect;
+        }
+        if (!$db->transCommit()) {
+            $this->msg('err', 'Unable to remove student.');
+            return $redirect;
+        }
+
+        foreach ($photos as $photo) {
+            $path = FCPATH . 'uploads/' . basename($photo);
+            if (is_file($path) && !unlink($path)) {
+                log_message('warning', 'Unable to remove listing photo for deleted student: {path}', ['path' => $path]);
+            }
+        }
+        $this->msg('msg', 'Student removed.');
+        return $redirect;
+    }
+
     public function form($id = null)
     {
         if ($r = $this->needAdmin()) return $r;

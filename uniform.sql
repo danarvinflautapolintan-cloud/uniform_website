@@ -176,7 +176,7 @@ INSERT INTO `uniform_sizes` (`id`, `uniform_id`, `size`, `stock`) VALUES
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
-  `student_no` varchar(20) NOT NULL,
+  `student_no` varchar(11) NOT NULL,
   `name` varchar(100) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `role` enum('student','admin') NOT NULL DEFAULT 'student',

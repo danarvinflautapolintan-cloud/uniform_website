@@ -37,7 +37,7 @@ class Shop extends AppBase
     {
         if ($this->request->getMethod() === 'POST') {
             $ok = $this->validate([
-                'student_no' => 'required|regex_match[/^[A-Za-z0-9-]{4,20}$/]|is_unique[users.student_no]',
+                'student_no' => 'required|regex_match[/^[0-9]{11}$/]|greater_than_equal_to[20220000000]|is_unique[users.student_no]',
                 'name'       => 'required|max_length[100]',
                 'password'   => 'required|min_length[8]',
             ]);
