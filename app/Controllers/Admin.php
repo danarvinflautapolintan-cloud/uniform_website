@@ -17,7 +17,9 @@ class Admin extends AppBase
     private function sizesOf(array $ids): array
     {
         $out = [];
-        if ($ids) foreach (db_connect()->table('uniform_sizes')->whereIn('uniform_id', $ids)->get()->getResultArray() as $r) $out[$r['uniform_id']][$r['size']] = (int) $r['stock'];
+        if ($ids) foreach (db_connect()->table('uniform_sizes')->whereIn('uniform_id', $ids)->get()->getResultArray() as $r) {
+            $out[$r['uniform_id']][$r['size']] = ['stock' => (int) $r['stock'], 'price' => (float) $r['price']];
+        }
         return $out;
     }
 
@@ -111,9 +113,11 @@ class Admin extends AppBase
         if ($id) {
             $it = db_connect()->table('uniforms')->where('id', (int) $id)->get()->getRowArray();
             if (!$it) return redirect()->to('/admin');
-            $stock = $this->sizesOf([(int) $id])[(int) $id] ?? [];
+            $sizeData = $this->sizesOf([(int) $id])[(int) $id] ?? [];
+        } else {
+            $sizeData = [];
         }
-        return view('admin/form', ['it' => $it, 'stock' => $stock, 'sizes' => self::SIZES]);
+        return view('admin/form', ['it' => $it, 'sizeData' => $sizeData, 'sizes' => self::SIZES]);
     }
 
     public function save()
@@ -130,10 +134,12 @@ class Admin extends AppBase
             'name'          => 'required|min_length[3]|max_length[100]',
             'description'   => 'permit_empty|max_length[255]',
             'date_acquired' => 'required|valid_date[Y-m-d]',
-            'price'         => 'required|decimal|greater_than_equal_to[0]|less_than[100000]',
         ];
         if (!$id) $rules['photo'] = 'uploaded[photo]|' . $img; elseif ($has) $rules['photo'] = $img;
-        foreach (self::SIZES as $s) $rules["stock.$s"] = 'required|is_natural|less_than[1000]';
+        foreach (self::SIZES as $s) {
+            $rules["price.$s"] = 'required|decimal|greater_than_equal_to[0]|less_than[100000]';
+            $rules["stock.$s"] = 'required|is_natural|less_than[1000]';
+        }
         if (!$this->validate($rules)) {
             $this->msg('err', implode(' ', $this->validator->getErrors()));
             return redirect()->back()->withInput();
@@ -142,14 +148,19 @@ class Admin extends AppBase
             'name'          => trim($this->request->getPost('name')),
             'description'   => trim((string) $this->request->getPost('description')),
             'date_acquired' => trim((string) $this->request->getPost('date_acquired')),
-            'price'         => round((float) $this->request->getPost('price'), 2),
         ];
         if ($has) { $row['photo'] = $file->getRandomName(); $file->move(FCPATH . 'uploads', $row['photo']); }
         $stock = $this->request->getPost('stock');
+        $prices = $this->request->getPost('price');
         $db->transStart();
         if ($id) $db->table('uniforms')->where('id', $id)->update($row);
         else { $db->table('uniforms')->insert($row); $id = $db->insertID(); }
-        foreach (self::SIZES as $s) $db->query('INSERT INTO uniform_sizes(uniform_id,size,stock) VALUES(?,?,?) ON DUPLICATE KEY UPDATE stock=VALUES(stock)', [$id, $s, (int) $stock[$s]]);
+        foreach (self::SIZES as $s) {
+            $db->query(
+                'INSERT INTO uniform_sizes(uniform_id,size,stock,price) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE stock=VALUES(stock),price=VALUES(price)',
+                [$id, $s, (int) $stock[$s], round((float) $prices[$s], 2)]
+            );
+        }
         $db->transComplete();
         if ($has && $old) @unlink(FCPATH . 'uploads/' . basename($old['photo']));
         $this->msg('msg', 'Uniform saved.');
@@ -167,7 +178,7 @@ class Admin extends AppBase
 
     private function allRequests(string $st = ''): array
     {
-        $b = db_connect()->table('requests r')->select('r.id,r.status,r.created_at,us.name student,us.student_no,u.name uniform,s.size')
+        $b = db_connect()->table('requests r')->select('r.id,r.status,r.created_at,r.price,us.name student,us.student_no,u.name uniform,s.size')
             ->join('users us', 'us.id=r.user_id')->join('uniform_sizes s', 's.id=r.size_id')->join('uniforms u', 'u.id=s.uniform_id')
             ->orderBy('r.id', 'DESC');
         if (in_array($st, ['pending', 'approved', 'rejected', 'claimed'], true)) $b->where('r.status', $st);

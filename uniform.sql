@@ -78,6 +78,7 @@ CREATE TABLE `requests` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `size_id` int(11) NOT NULL,
+  `price` decimal(10,2) NOT NULL DEFAULT 0.00,
   `status` enum('pending','approved','rejected','claimed') NOT NULL DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -86,19 +87,19 @@ CREATE TABLE `requests` (
 -- Dumping data for table `requests`
 --
 
-INSERT INTO `requests` (`id`, `user_id`, `size_id`, `status`, `created_at`) VALUES
-(1, 1, 13, 'pending', '2026-10-19 07:30:56'),
-(2, 1, 9, 'rejected', '2026-10-19 07:31:08'),
-(3, 1, 21, 'rejected', '2026-10-19 07:32:46'),
-(4, 1, 1, 'claimed', '2026-10-19 08:48:08'),
-(5, 2, 13, 'claimed', '2026-10-19 08:49:12'),
-(7, 2, 14, 'approved', '2026-10-19 08:57:52'),
-(8, 2, 20, 'approved', '2026-10-19 08:58:48'),
-(9, 2, 24, 'claimed', '2026-10-19 09:01:12'),
-(10, 2, 9, 'approved', '2026-10-19 09:03:49'),
-(11, 3, 20, 'approved', '2026-10-19 09:18:44'),
-(12, 3, 8, 'claimed', '2026-10-19 09:36:47'),
-(13, 2, 21, 'claimed', '2026-10-19 09:38:50');
+INSERT INTO `requests` (`id`, `user_id`, `size_id`, `price`, `status`, `created_at`) VALUES
+(1, 1, 13, 0.00, 'pending', '2026-10-19 07:30:56'),
+(2, 1, 9, 0.00, 'rejected', '2026-10-19 07:31:08'),
+(3, 1, 21, 250.00, 'rejected', '2026-10-19 07:32:46'),
+(4, 1, 1, 0.00, 'claimed', '2026-10-19 08:48:08'),
+(5, 2, 13, 0.00, 'claimed', '2026-10-19 08:49:12'),
+(7, 2, 14, 0.00, 'approved', '2026-10-19 08:57:52'),
+(8, 2, 20, 250.00, 'approved', '2026-10-19 08:58:48'),
+(9, 2, 24, 250.00, 'claimed', '2026-10-19 09:01:12'),
+(10, 2, 9, 0.00, 'approved', '2026-10-19 09:03:49'),
+(11, 3, 20, 250.00, 'approved', '2026-10-19 09:18:44'),
+(12, 3, 8, 0.00, 'claimed', '2026-10-19 09:36:47'),
+(13, 2, 21, 250.00, 'claimed', '2026-10-19 09:38:50');
 
 -- --------------------------------------------------------
 
@@ -136,38 +137,39 @@ CREATE TABLE `uniform_sizes` (
   `id` int(11) NOT NULL,
   `uniform_id` int(11) NOT NULL,
   `size` varchar(5) NOT NULL,
-  `stock` int(11) NOT NULL DEFAULT 0
+  `stock` int(11) NOT NULL DEFAULT 0,
+  `price` decimal(10,2) NOT NULL DEFAULT 0.00
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `uniform_sizes`
 --
 
-INSERT INTO `uniform_sizes` (`id`, `uniform_id`, `size`, `stock`) VALUES
-(1, 1, 'XS', 0),
-(2, 1, 'S', 1),
-(3, 1, 'M', 1),
-(4, 1, 'L', 1),
-(5, 1, 'XL', 1),
-(6, 1, 'XXL', 1),
-(7, 2, 'XS', 0),
-(8, 2, 'S', 1),
-(9, 2, 'M', 2),
-(10, 2, 'L', 0),
-(11, 2, 'XL', 1),
-(12, 2, 'XXL', 1),
-(13, 3, 'XS', 0),
-(14, 3, 'S', 0),
-(15, 3, 'M', 0),
-(16, 3, 'L', 0),
-(17, 3, 'XL', 0),
-(18, 3, 'XXL', 0),
-(19, 4, 'XS', 0),
-(20, 4, 'S', 0),
-(21, 4, 'M', 0),
-(22, 4, 'L', 0),
-(23, 4, 'XL', 0),
-(24, 4, 'XXL', 1);
+INSERT INTO `uniform_sizes` (`id`, `uniform_id`, `size`, `stock`, `price`) VALUES
+(1, 1, 'XS', 0, 0.00),
+(2, 1, 'S', 1, 0.00),
+(3, 1, 'M', 1, 0.00),
+(4, 1, 'L', 1, 0.00),
+(5, 1, 'XL', 1, 0.00),
+(6, 1, 'XXL', 1, 0.00),
+(7, 2, 'XS', 0, 0.00),
+(8, 2, 'S', 1, 0.00),
+(9, 2, 'M', 2, 0.00),
+(10, 2, 'L', 0, 0.00),
+(11, 2, 'XL', 1, 0.00),
+(12, 2, 'XXL', 1, 0.00),
+(13, 3, 'XS', 0, 0.00),
+(14, 3, 'S', 0, 0.00),
+(15, 3, 'M', 0, 0.00),
+(16, 3, 'L', 0, 0.00),
+(17, 3, 'XL', 0, 0.00),
+(18, 3, 'XXL', 0, 0.00),
+(19, 4, 'XS', 0, 250.00),
+(20, 4, 'S', 0, 250.00),
+(21, 4, 'M', 0, 250.00),
+(22, 4, 'L', 0, 250.00),
+(23, 4, 'XL', 0, 250.00),
+(24, 4, 'XXL', 1, 250.00);
 
 -- --------------------------------------------------------
 

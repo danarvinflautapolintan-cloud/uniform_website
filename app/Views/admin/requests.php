@@ -4,8 +4,9 @@
 <div class="tabs"><?php foreach (['' => 'All', 'pending' => 'Pending', 'approved' => 'Approved', 'claimed' => 'Claimed', 'rejected' => 'Rejected'] as $k => $v): ?>
 <a class="tab<?= $st === $k ? ' on' : '' ?>" href="<?= site_url('admin/requests') . ($k ? '?status=' . $k : '') ?>"><?= $v ?></a><?php endforeach ?></div>
 <?php if (!$rows): ?><p class="empty">No requests.</p><?php else: ?>
-<div class="tablewrap"><table><tr><th>Student</th><th>Uniform</th><th>Size</th><th>Status</th><th>Date</th><th></th></tr>
+<div class="tablewrap"><table><tr><th>Student</th><th>Uniform</th><th>Size</th><th>Price</th><th>Status</th><th>Date</th><th></th></tr>
 <?php foreach ($rows as $r): ?><tr><td><?= esc($r['student']) ?> (<?= esc($r['student_no']) ?>)</td><td><?= esc($r['uniform']) ?></td><td><?= esc($r['size']) ?></td>
+<td><?= (float) $r['price'] > 0 ? '₱' . number_format((float) $r['price'], 2) : 'Free' ?></td>
 <td><span class="badge b-<?= esc($r['status']) ?>"><?= esc($r['status']) ?></span></td><td><?= esc($r['created_at']) ?></td><td>
 <?php $acts = $r['status'] === 'pending' ? ['approve', 'reject'] : ($r['status'] === 'approved' ? ['claim'] : []);
 foreach ($acts as $a): ?><form method="post" action="<?= site_url('admin/requests/act') ?>" class="inline" data-confirm="<?= esc(ucfirst($a)) ?> this request?"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int) $r['id'] ?>"><input type="hidden" name="action" value="<?= $a ?>"><button class="btn sm<?= $a === 'reject' ? ' ghost' : '' ?>"><?= esc(ucfirst($a)) ?></button></form> <?php endforeach ?>

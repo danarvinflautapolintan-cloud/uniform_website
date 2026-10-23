@@ -77,7 +77,10 @@ class Shop extends AppBase
         $s = $db->table('uniform_sizes')->where('id', $sid)->where('stock >', 0)->get()->getRowArray();
         if (!$s) $this->msg('err', 'Out of stock.');
         elseif ($db->table('requests')->where('user_id', $uid)->where('size_id', $sid)->whereIn('status', ['pending', 'approved'])->countAllResults() > 0) $this->msg('err', 'You already requested this.');
-        else { $db->table('requests')->insert(['user_id' => $uid, 'size_id' => $sid]); $this->msg('msg', 'Request sent! Wait for the admin to approve it.'); }
+        else {
+            $db->table('requests')->insert(['user_id' => $uid, 'size_id' => $sid, 'price' => $s['price']]);
+            $this->msg('msg', 'Request sent! Wait for the admin to approve it.');
+        }
         return redirect()->to('/mine');
     }
 
@@ -86,7 +89,7 @@ class Shop extends AppBase
     {
         if ($r = $this->needUser()) return $r;
         if ($this->me()['role'] === 'admin') return redirect()->to('/admin');
-        $rows = db_connect()->table('requests r')->select('r.id,r.status,r.created_at,u.name,u.price,s.size')
+        $rows = db_connect()->table('requests r')->select('r.id,r.status,r.created_at,r.price,u.name,s.size')
             ->join('uniform_sizes s', 's.id=r.size_id')->join('uniforms u', 'u.id=s.uniform_id')
             ->where('r.user_id', $this->me()['id'])->orderBy('r.id', 'DESC')->get()->getResultArray();
         return view('shop/mine', ['rows' => $rows]);

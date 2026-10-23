@@ -11,11 +11,14 @@
     <label>Name<input name="name" required minlength="3" maxlength="100" placeholder="e.g. TAU Polo Shirt" value="<?= esc(old('name', $it['name'])) ?>"></label>
     <label>Description<textarea name="description" rows="3" maxlength="255" placeholder="Short details (color, fabric, who it's for)"><?= esc(old('description', $it['description'])) ?></textarea></label>
     <label>Date acquired<input type="date" name="date_acquired" required value="<?= esc(old('date_acquired', $it['date_acquired'] ?? '')) ?>"></label>
-    <label>Price (₱)<input type="number" name="price" min="0" max="99999" step="0.01" required placeholder="0.00" value="<?= esc(old('price', $it['price'])) ?>"></label>
-    <h3>Stock per size</h3>
+    <h3>Price and stock per size</h3>
+    <?php $oldPrices = old('price'); $oldStock = old('stock'); $oldPrices = is_array($oldPrices) ? $oldPrices : []; $oldStock = is_array($oldStock) ? $oldStock : []; ?>
     <div class="sizes">
     <?php foreach ($sizes as $s): ?>
-      <label class="sz-box"><span><?= esc($s) ?></span><input type="number" name="stock[<?= esc($s) ?>]" min="0" max="999" required value="<?= (int) ($stock[$s] ?? 0) ?>"></label>
+      <div class="sz-box"><span><?= esc($s) ?></span>
+        <label>Price (₱)<input type="number" name="price[<?= esc($s) ?>]" min="0" max="99999" step="0.01" required value="<?= esc($oldPrices[$s] ?? $sizeData[$s]['price'] ?? '0.00') ?>"></label>
+        <label>Stock<input type="number" name="stock[<?= esc($s) ?>]" min="0" max="999" required value="<?= esc($oldStock[$s] ?? $sizeData[$s]['stock'] ?? 0) ?>"></label>
+      </div>
     <?php endforeach ?>
     </div>
     <div class="actions"><button class="btn">Save uniform</button><a class="btn ghost" href="<?= site_url('admin') ?>">Cancel</a></div>
